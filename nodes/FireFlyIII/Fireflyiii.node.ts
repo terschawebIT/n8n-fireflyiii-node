@@ -9,67 +9,77 @@ import {
 import { fireflyApiRequest } from './utils/ApiRequest';
 import { aboutOperations, aboutFields } from './actions/about/about.resource';
 import { accountsOperations, accountsFields } from './actions/accounts/accounts.resource';
+import { searchFields, searchOperations } from './actions/search/search.resource';
 
 export class Fireflyiii implements INodeType {
 	description: INodeTypeDescription = {
-			displayName: 'FireFly III',
-			name: 'fireflyiii',
-			icon: 'file:fireflyiii.svg',
-			group: ['input'],
-			version: 1,
-			subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-			description: 'Read, update, write and delete data using the powerful FireFly III API',
-			defaults: {
-					name: 'FireFly III',
+		displayName: 'FireFly III',
+		name: 'fireflyiii',
+		icon: 'file:fireflyiii.svg',
+		group: ['input'],
+		version: 1,
+		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
+		description: 'Read, update, write and delete data using the powerful FireFly III API',
+		defaults: {
+				name: 'FireFly III',
+		},
+		inputs: ['main'],
+		outputs: ['main'],
+		credentials: [
+				{
+						name: 'fireflyiiiOAuth2Api',
+						required: true,
+				},
+		],
+		properties: [
+			{
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+						// About resource
+						{
+							name: 'About API',
+							value: 'about',
+							description: 'Endpoints deliver general system information, version- and meta information',
+						},
+						// Accounts resource
+						{
+							name: 'Accounts API',
+							value: 'accounts',
+							description: 'Endpoints deliver all of the user\'s asset, expense and other CRUD operations by Account',
+						},
+						// Search resource
+						{
+							name: 'Search API',
+							value: 'search',
+							description: 'Endpoints deliver search results for transactions or accounts',
+							hint: 'Check https://docs.firefly-iii.org/how-to/firefly-iii/features/search/ for more information',
+						},
+				],
+				default: 'about',
 			},
-			inputs: ['main'],
-			outputs: ['main'],
-			credentials: [
-					{
-							name: 'fireflyiiiOAuth2Api',
-							required: true,
+			// Global optional headers for all requests
+			{
+					displayName: 'X-Trace-ID',
+					name: 'xTraceId',
+					type: 'string',
+					default: '',
+					description: 'A unique identifier for the request, used for tracing',
+					typeOptions: {
+						regex: '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
 					},
-			],
-			properties: [
-					{
-							displayName: 'Resource',
-							name: 'resource',
-							type: 'options',
-							noDataExpression: true,
-							options: [
-									// About resource
-									{
-											name: 'About API',
-											value: 'about',
-											description: 'Endpoints deliver general system information, version- and meta information',
-									},
-									// Accounts resource
-									{
-											name: 'Accounts API',
-											value: 'accounts',
-											description: 'Endpoints deliver all of the user\'s asset, expense and other CRUD operations by Account',
-									},
-							],
-							default: 'about',
-					},
-					// Global optional headers for all requests
-					{
-							displayName: 'X-Trace-ID',
-							name: 'xTraceId',
-							type: 'string',
-							default: '',
-							description: 'A unique identifier for the request, used for tracing',
-							typeOptions: {
-								regex: '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
-							},
-							placeholder: '123e4567-e89b-12d3-a456-426614174000',
-					},
-					// Include operations and fields for the added resources
-					...aboutOperations,
-					...aboutFields,
-					...accountsOperations,
-					...accountsFields,
-			],
+					placeholder: '123e4567-e89b-12d3-a456-426614174000',
+			},
+			// Include operations and fields for the added resources
+			...aboutOperations,
+			...aboutFields,
+			...accountsOperations,
+			...accountsFields,
+			...searchOperations,
+			...searchFields,
+		],
 	};
 
 	// Logic for Execution
@@ -208,8 +218,27 @@ export class Fireflyiii implements INodeType {
 				}
 			}
 			// ----------------------------------
-			//             ..... API
+			//             Search API
 			// ----------------------------------
+			else if (resource === 'search') {
+				const searchFor = this.getNodeParameter('searchFor', i) as string;
+				const queryString = this.getNodeParameter('queryString', i) as string;
+
+				// Add account-specific fields if available
+				const accountType = this.getNodeParameter('type', i, '') as string;
+				const searchField = this.getNodeParameter('searchField', i, '') as string;
+
+				const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/search/${searchFor}`,
+						query: {
+							type: accountType,
+							field: searchField,
+							query: queryString,
+						},
+				});
+    		returnData.push({ json: response });
+			}
 		}
 
 		return [returnData];
