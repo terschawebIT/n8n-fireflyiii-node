@@ -10,9 +10,70 @@ import {
 import { fireflyApiRequest } from './utils/ApiRequest';
 import { aboutOperations, aboutFields } from './actions/about/about.resource';
 import { accountsOperations, accountsFields } from './actions/accounts/accounts.resource';
-import { searchFields, searchOperations } from './actions/search/search.resource';
+import {
+	searchFields,
+	insightsFields,
+	generalOperations,
+} from './actions/general/general.resource';
 import { categoriesFields, categoriesOperations } from './actions/categories/categories.resource';
 import { tagsFields, tagsOperations } from './actions/tags/tags.resource';
+import {
+	transactionsFields,
+	transactionsOperations,
+} from './actions/transactions/transactions.resource';
+
+// Helper Function: Handle Create and Update Transactions
+async function handleTransaction(
+	this: IExecuteFunctions,
+	method: 'POST' | 'PUT',
+	endpoint: string,
+	i: number,
+): Promise<IDataObject> {
+	// Change to return a single object
+	const transactionSettings = this.getNodeParameter('transactionSettings', i, {}) as IDataObject;
+	const transactionsData = this.getNodeParameter('transactionsData', i, {}) as IDataObject;
+
+	// Extract and structure transactions array properly
+	const transactionsArray = ((transactionsData.transaction as IDataObject[]) || []).map(
+		(transaction) => {
+			const transactionFields = transaction.transactionFields as IDataObject;
+
+			// Parse tags from comma-separated string to an array
+			if (transactionFields.tags && typeof transactionFields.tags === 'string') {
+				transactionFields.tags = transactionFields.tags.split(',').map((tag) => tag.trim());
+			}
+
+			return transactionFields;
+		},
+	);
+
+	// Prepare payload
+	const body = {
+		...transactionSettings,
+		transactions: transactionsArray,
+	};
+
+	// Make the API request
+	const response = await fireflyApiRequest.call(this, {
+		method,
+		endpoint,
+		body,
+	});
+
+	return response; // Return the API response as a single object
+}
+// Helper Function: Handle Comma Separated String to Array[integer]
+function parseCommaSeparatedFields(fields: { [key: string]: string }): IDataObject {
+	const parsedFields: IDataObject = {};
+
+	for (const [key, value] of Object.entries(fields)) {
+		if (value) {
+			parsedFields[`${key}`] = value.split(',').map((item) => item.trim());
+		}
+	}
+
+	return parsedFields;
+}
 
 export class Fireflyiii implements INodeType {
 	description: INodeTypeDescription = {
@@ -35,6 +96,14 @@ export class Fireflyiii implements INodeType {
 			},
 		],
 		properties: [
+			// General Info Notice TO SHOW ON TOP to check API Docs
+			{
+				displayName:
+					'Check out the amazing <a href="https://api-docs.firefly-iii.org/#/" target="_blank">API Documentation Site</a> to learn more.',
+				name: 'Tip',
+				type: 'notice',
+				default: '',
+			},
 			{
 				displayName: 'Resource',
 				name: 'resource',
@@ -43,9 +112,9 @@ export class Fireflyiii implements INodeType {
 				options: [
 					// Search resource
 					{
-						name: 'Search API',
-						value: 'search',
-						description: 'Endpoints deliver search results for transactions or accounts',
+						name: 'General Summary',
+						value: 'general',
+						description: 'Endpoints for search API & Insights API',
 						hint: 'Check https://docs.firefly-iii.org/how-to/firefly-iii/features/search/ for more information',
 					},
 					// About resource
@@ -61,6 +130,12 @@ export class Fireflyiii implements INodeType {
 						value: 'accounts',
 						description:
 							"Endpoints deliver all of the user's asset, expense and other CRUD operations by Account",
+					},
+					// Transactions resource
+					{
+						name: 'Transactions API',
+						value: 'transactions',
+						description: 'One endpoint to rule them all. All transaction related endpoints.',
 					},
 					// Categories resource
 					{
@@ -78,6 +153,13 @@ export class Fireflyiii implements INodeType {
 				],
 				default: 'about',
 			},
+			// Operations for the selected resource
+			...generalOperations,
+			...aboutOperations,
+			...accountsOperations,
+			...transactionsOperations,
+			...categoriesOperations,
+			...tagsOperations,
 			// Global optional X-Trace-ID header for all requests
 			{
 				displayName: 'X-Trace-ID',
@@ -87,16 +169,13 @@ export class Fireflyiii implements INodeType {
 				description: 'A unique UUID identifier for the request, used for debugging and tracing',
 				placeholder: '123e4567-e89b-12d3-a456-426614174000',
 			},
-			// Include operations and fields for the added resources
-			...searchOperations,
+			// show for operations
 			...searchFields,
-			...aboutOperations,
+			...insightsFields,
 			...aboutFields,
-			...accountsOperations,
 			...accountsFields,
-			...categoriesOperations,
+			...transactionsFields,
 			...categoriesFields,
-			...tagsOperations,
 			...tagsFields,
 		],
 	};
@@ -111,11 +190,63 @@ export class Fireflyiii implements INodeType {
 			const operation = this.getNodeParameter('operation', i) as string;
 
 			// Execution logic for different resources and operations
+			// ----------------------------------
+			//             General APIs
+			// ----------------------------------
+			if (resource === 'general') {
+				if (operation === 'searchAll') {
+					const searchFor = this.getNodeParameter('searchFor', i) as string;
+					const queryString = this.getNodeParameter('queryString', i) as string;
 
+					// Add account-specific fields if available
+					const accountType = this.getNodeParameter('type', i, '') as string;
+					const searchField = this.getNodeParameter('searchField', i, '') as string;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/search/${searchFor}`,
+						query: {
+							type: accountType,
+							field: searchField,
+							query: queryString,
+						},
+					});
+					returnData.push({ json: response });
+				} else if (operation === 'getInsights') {
+					// Get "Insights On" & "Group By" values for the API endpoint
+					const insightScope = this.getNodeParameter('insight', i) as string;
+					const groupBy = this.getNodeParameter('groupBy', i, '') as string;
+
+					// Get date range filters
+					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+
+					// Collect all optional filters
+					const optionalFilters = {
+						accounts: this.getNodeParameter('accounts', i, ['']) as string,
+						categories: this.getNodeParameter('categories', i, '') as string,
+						tags: this.getNodeParameter('tags', i, '') as string,
+						bills: this.getNodeParameter('bills', i, '') as string,
+						budgets: this.getNodeParameter('budgets', i, '') as string,
+					};
+
+					// Parse comma separated optional filters to array[integer]
+					const parsedFilters = parseCommaSeparatedFields(optionalFilters);
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/insight/${insightScope}/${groupBy}`,
+						query: {
+							...dateRangeFilters,
+							...parsedFilters,
+						},
+					});
+					returnData.push({ json: response });
+				}
+			}
 			// ----------------------------------
 			//             About API
 			// ----------------------------------
-			if (resource === 'about') {
+			else if (resource === 'about') {
 				if (operation === 'getSystemInfo') {
 					const response = await fireflyApiRequest.call(this, {
 						method: 'GET',
@@ -254,28 +385,6 @@ export class Fireflyiii implements INodeType {
 					});
 					returnData.push({ json: response });
 				}
-			}
-			// ----------------------------------
-			//             Search API
-			// ----------------------------------
-			else if (resource === 'search') {
-				const searchFor = this.getNodeParameter('searchFor', i) as string;
-				const queryString = this.getNodeParameter('queryString', i) as string;
-
-				// Add account-specific fields if available
-				const accountType = this.getNodeParameter('type', i, '') as string;
-				const searchField = this.getNodeParameter('searchField', i, '') as string;
-
-				const response = await fireflyApiRequest.call(this, {
-					method: 'GET',
-					endpoint: `/search/${searchFor}`,
-					query: {
-						type: accountType,
-						field: searchField,
-						query: queryString,
-					},
-				});
-				returnData.push({ json: response });
 			}
 			// ----------------------------------
 			//             Categories API
@@ -436,6 +545,134 @@ export class Fireflyiii implements INodeType {
 							...dateRangeFilters,
 						},
 					});
+					returnData.push({ json: response });
+				}
+			}
+			// ----------------------------------
+			//             Transactions API
+			// ----------------------------------
+			else if (resource === 'transactions') {
+				if (operation === 'listTransactions') {
+					const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+
+					// Build query parameters
+					const query: IDataObject = {
+						type: filters.type || filters.customType,
+						start: filters.start,
+						end: filters.end,
+						...paginationOptions,
+					};
+
+					// API Request
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: '/transactions',
+						query,
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'getTransaction') {
+					const transactionId = this.getNodeParameter('transactionId', i) as string;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/transactions/${transactionId}`,
+					});
+					returnData.push({ json: response });
+				} else if (operation === 'createTransaction') {
+					const response = await handleTransaction.call(this, 'POST', '/transactions', i);
+					returnData.push({ json: response });
+				} else if (operation === 'updateTransaction') {
+					const transactionId = this.getNodeParameter('transactionId', i) as string;
+					const response = await handleTransaction.call(
+						this,
+						'PUT',
+						`/transactions/${transactionId}`,
+						i,
+					);
+					returnData.push({ json: response });
+				} else if (operation === 'deleteTransaction') {
+					const transactionId = this.getNodeParameter('transactionId', i) as string;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'DELETE',
+						endpoint: `/transactions/${transactionId}`,
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'getAttachments') {
+					const transactionId = this.getNodeParameter('transactionId', i) as string;
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/transactions/${transactionId}/attachments`,
+						query: {
+							...paginationOptions,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'getPiggyBankEvents') {
+					const transactionId = this.getNodeParameter('transactionId', i) as string;
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/transactions/${transactionId}/piggy-bank-events`,
+						query: {
+							...paginationOptions,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'listTransactionLinks') {
+					const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/transaction-journals/${transactionJournalId}/links`,
+						query: {
+							...paginationOptions,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'getTransactionJournal') {
+					const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/transaction-journals/${transactionJournalId}`,
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'deleteTransactionSplit') {
+					const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'DELETE',
+						endpoint: `/transaction-journals/${transactionJournalId}`,
+					});
+
 					returnData.push({ json: response });
 				}
 			}
