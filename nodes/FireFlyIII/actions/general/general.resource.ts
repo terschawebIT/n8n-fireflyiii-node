@@ -212,6 +212,12 @@ export const insightsFields: INodeProperties[] = [
 			"Some Group by options doesn't work with all Transaction types, try it or check API Docs to learn more.",
 		name: 'Tip',
 		type: 'notice',
+		displayOptions: {
+			show: {
+				resource: ['general'],
+				operation: ['getInsights'],
+			},
+		},
 		default: '',
 	},
 	{
