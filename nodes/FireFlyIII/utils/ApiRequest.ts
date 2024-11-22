@@ -39,7 +39,7 @@ export async function fireflyApiRequest(
 
 	// Filter out empty query parameters
 	const filteredQuery = Object.fromEntries(
-		Object.entries(query || {}).filter(([_, value]) => value != null && value !== '')
+		Object.entries(query || {}).filter(([_, value]) => value != null && value !== ''),
 	);
 
 	// Build request options
@@ -55,6 +55,7 @@ export async function fireflyApiRequest(
 		},
 		url,
 		json: true,
+		returnFullResponse: true,
 	};
 
 	// Only include body for non-GET requests
@@ -63,9 +64,5 @@ export async function fireflyApiRequest(
 	}
 
 	// Make API request
-	try {
-		return await this.helpers.requestWithAuthentication.call(this, 'fireflyiiiOAuth2Api', options);
-	} catch (error) {
-		throw new Error(`Firefly III API request failed: ${error.message}`);
-	}
+	return this.helpers.requestWithAuthentication.call(this, 'fireflyiiiOAuth2Api', options);
 }
