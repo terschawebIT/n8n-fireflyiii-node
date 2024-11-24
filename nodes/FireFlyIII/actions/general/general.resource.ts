@@ -27,6 +27,12 @@ export const generalOperations: INodeProperties[] = [
 					'The "insight" endpoints try to deliver sums, balances and insightful information in the broadest sense of the word',
 				action: 'Get general insights',
 			},
+			{
+				name: 'Export Data',
+				value: 'exportData',
+				description: 'Export data from Firefly III',
+				action: 'Export data',
+			},
 		],
 		default: 'searchAll',
 	},
@@ -359,5 +365,114 @@ export const insightsFields: INodeProperties[] = [
 		},
 		description: 'Comma-separated list of bill IDs',
 	},
+];
+
+// Export Data Operation Fields
+export const exportFields: INodeProperties[] = [
+	// Fields for Export Data
+	{
+		displayName: 'Export Type',
+		name: 'exportType',
+		type: 'options',
+		default: 'accounts',
+		options: [
+			{ name: 'Accounts', value: 'accounts' },
+			{ name: 'Bills', value: 'bills' },
+			{ name: 'Budgets', value: 'budgets' },
+			{ name: 'Categories', value: 'categories' },
+			{ name: 'Piggy Banks', value: 'piggy-banks' },
+			{ name: 'Recurring Transactions', value: 'recurring' },
+			{ name: 'Rules', value: 'rules' },
+			{ name: 'Tags', value: 'tags' },
+			{ name: 'Transactions', value: 'transactions' },
+		],
+		displayOptions: {
+			show: {
+				resource: ['general'],
+				operation: ['exportData'],
+			},
+		},
+		description: 'The type of data to export',
+	},
+	{
+		displayName: 'Format',
+		name: 'format',
+		type: 'options',
+		default: '',
+		options: [
+			{
+				name: '',
+				value: '',
+				description: 'None',
+			},
+			{
+				name: 'CSV',
+				value: 'csv',
+				description: 'Export data in CSV format',
+			},
+		],
+		displayOptions: {
+			show: {
+				resource: ['general'],
+				operation: ['exportData'],
+				exportType: [
+					'accounts',
+					'bills',
+					'budgets',
+					'categories',
+					'piggy-banks',
+					'recurring',
+					'rules',
+					'tags',
+				],
+			},
+		},
+		description: 'The format to export the data in',
+	},
+	{
+		displayName: 'Start Date',
+		name: 'start',
+		type: 'string',
+		required: true,
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['general'],
+				operation: ['exportData'],
+				exportType: ['transactions'],
+			},
+		},
+		description: 'Start date for the export (YYYY-MM-DD)',
+	},
+	{
+		displayName: 'End Date',
+		name: 'end',
+		type: 'string',
+		required: true,
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['general'],
+				operation: ['exportData'],
+				exportType: ['transactions'],
+			},
+		},
+		description: 'End date for the export (YYYY-MM-DD)',
+	},
+		// Optional Account IDs for "Test & Trigger"
+		{
+			displayName: 'Account IDs',
+			name: 'accounts',
+			type: 'string',
+			default: '',
+			displayOptions: {
+				show: {
+					resource: ['general'],
+					operation: ['exportData'],
+					exportType: ['transactions'],
+					},
+			},
+			description: 'Comma-separated list of account IDs',
+		},
 
 ];

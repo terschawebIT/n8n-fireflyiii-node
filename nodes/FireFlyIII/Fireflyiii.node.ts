@@ -14,6 +14,7 @@ import {
 	searchFields,
 	insightsFields,
 	generalOperations,
+	exportFields,
 } from './actions/general/general.resource';
 import { categoriesFields, categoriesOperations } from './actions/categories/categories.resource';
 import { tagsFields, tagsOperations } from './actions/tags/tags.resource';
@@ -21,6 +22,11 @@ import {
 	transactionsFields,
 	transactionsOperations,
 } from './actions/transactions/transactions.resource';
+import {
+	rulesAndGroupsFields,
+	rulesAndGroupsOperations,
+} from './actions/rules/rulesAndGroups.resource';
+import { fireflyApiRequestV2 } from './utils/ApiRequestV2';
 
 // Helper Function: Handle Create and Update Transactions
 async function handleTransaction(
@@ -112,10 +118,10 @@ export class Fireflyiii implements INodeType {
 				options: [
 					// Search resource
 					{
-						name: 'General Summary',
+						name: 'General',
 						value: 'general',
-						description: 'Endpoints for search API & Insights API',
-						hint: 'Check https://docs.firefly-iii.org/how-to/firefly-iii/features/search/ for more information',
+						description: 'Endpoints for search, Insights and Export APIs',
+						hint: 'Check https://docs.firefly-iii.org/how-to/firefly-iii/features/search/ for more information on search',
 					},
 					// About resource
 					{
@@ -150,6 +156,12 @@ export class Fireflyiii implements INodeType {
 						value: 'tags',
 						description: "Endpoints deliver all of the user's tags and CRUD operations by Tag",
 					},
+					// Rules and Groups resource
+					{
+						name: 'Rules & Groups API',
+						value: 'rulesAndGroups',
+						description: 'Endpoints for rules and rule groups',
+					},
 				],
 				default: 'about',
 			},
@@ -160,6 +172,7 @@ export class Fireflyiii implements INodeType {
 			...transactionsOperations,
 			...categoriesOperations,
 			...tagsOperations,
+			...rulesAndGroupsOperations,
 			// Global optional X-Trace-ID header for all requests
 			{
 				displayName: 'X-Trace-ID',
@@ -172,11 +185,13 @@ export class Fireflyiii implements INodeType {
 			// show for operations
 			...searchFields,
 			...insightsFields,
+			...exportFields,
 			...aboutFields,
 			...accountsFields,
 			...transactionsFields,
 			...categoriesFields,
 			...tagsFields,
+			...rulesAndGroupsFields,
 		],
 	};
 
@@ -241,6 +256,53 @@ export class Fireflyiii implements INodeType {
 						},
 					});
 					returnData.push({ json: response });
+				} else if (operation === 'exportData') {
+					const exportType = this.getNodeParameter('exportType', i) as string;
+					const exportFormat = this.getNodeParameter('format', i, '') as string;
+
+					const start = this.getNodeParameter('start', i, '') as string;
+					const end = this.getNodeParameter('end', i, '') as string;
+
+					const accountsInput = this.getNodeParameter('accounts', i, '') as string;
+
+					const response = await fireflyApiRequestV2.call(
+						this,
+						'GET',
+						`/data/export/${exportType}`,
+						{},
+						{
+							type: exportFormat,
+							start,
+							end,
+							accounts: accountsInput,
+						},
+						undefined,
+						{ encoding: null, resolveWithFullResponse: true },
+					);
+
+					// console.log('Response Body?:', response.body);
+					// console.log('Response Headers:', response.headers);
+					// console.log('Response Object:', response);
+
+					// Extract filename from headers
+					let fileName = 'export.csv';
+					if (response.headers['content-disposition']) {
+						const match = response.headers['content-disposition'].match(/filename=(.+)/);
+						if (match) {
+							fileName = match[1];
+						}
+					}
+					// Prepare binary data
+					const binaryData = await this.helpers.prepareBinaryData(
+						response.body, fileName,
+					);
+
+					returnData.push({
+						json: {},
+						binary: {
+							data: binaryData,
+						},
+					});
 				}
 			}
 			// ----------------------------------
@@ -671,6 +733,162 @@ export class Fireflyiii implements INodeType {
 					const response = await fireflyApiRequest.call(this, {
 						method: 'DELETE',
 						endpoint: `/transaction-journals/${transactionJournalId}`,
+					});
+
+					returnData.push({ json: response });
+				}
+			}
+			// ----------------------------------
+			//             Rules & Groups API
+			// ----------------------------------
+			else if (resource === 'rulesAndGroups') {
+				// Rule Groups Operations
+				if (operation === 'listGroups') {
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: '/rule-groups',
+						query: {
+							...paginationOptions,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'getGroup') {
+					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/rule-groups/${ruleGroupId}`,
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'listGroupRules') {
+					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/rule-groups/${ruleGroupId}/rules`,
+						query: {
+							...paginationOptions,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'testGroup') {
+					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+					const testLimits = this.getNodeParameter('testLimits', i, {}) as IDataObject;
+					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
+
+					// Parse comma separated accounts to array[integer]
+					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/rule-groups/${ruleGroupId}/test`,
+						query: {
+							...paginationOptions,
+							...dateRangeFilters,
+							...testLimits,
+							...parsedAcconuts,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'triggerGroup') {
+					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
+
+					// Parse comma separated accounts to array[integer]
+					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'POST',
+						endpoint: `/rule-groups/${ruleGroupId}/trigger`,
+						body: {
+							...dateRangeFilters,
+							...parsedAcconuts,
+						},
+					});
+
+					returnData.push({ json: response });
+				}
+				// Rule Operations
+				else if (operation === 'listRules') {
+					const paginationOptions = this.getNodeParameter(
+						'paginationOptions',
+						i,
+						{},
+					) as IDataObject;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: '/rules',
+						query: {
+							...paginationOptions,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'getRule') {
+					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/rules/${ruleGroupId}`,
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'testRule') {
+					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
+
+					// Parse comma separated accounts to array[integer]
+					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'GET',
+						endpoint: `/rules/${ruleGroupId}/test`,
+						query: {
+							...dateRangeFilters,
+							...parsedAcconuts,
+						},
+					});
+
+					returnData.push({ json: response });
+				} else if (operation === 'triggerRule') {
+					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
+
+					// Parse comma separated accounts to array[integer]
+					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
+
+					const response = await fireflyApiRequest.call(this, {
+						method: 'POST',
+						endpoint: `/rules/${ruleGroupId}/trigger`,
+						query: {
+							...dateRangeFilters,
+							...parsedAcconuts,
+						},
 					});
 
 					returnData.push({ json: response });
