@@ -2,29 +2,28 @@
 
 This repository contains a custom node for [n8n](https://n8n.io/), an open-source workflow automation tool. The node integrates with [Firefly III](https://www.firefly-iii.org/), a self-hosted personal finance manager.
 
+It might not be the most advanced n8n node, built it for me while learning - so feel free to take it forward if needed.
+
 ## Features
 
-- **Create Transactions**: Automate the creation of transactions in Firefly III.
-- **Retrieve Accounts**: Fetch account details from Firefly III.
-- **List Transactions**: Retrieve a list of transactions from your Firefly III instance.
-- **Update Transactions**: Update existing transactions in Firefly III.
+Many of Firefly III endpoints implemented, including transactions, search and export - I believe it could help building many interesting workflows in n8n that automates finanance management even more.
 
 ## Supported Endpoints
 
 This node supports many of Firefly III API endpoints, such as:
 
-**/api/v1/transactions**: Create, list, update, and delete transactions.
-**/api/v1/accounts**: Retrieve, create, update, and delete account details.
-**/api/v1/budgets**: Fetch budget information.
-**/api/v1/categories**: List, create, update, and delete categories.
-**/api/v1/tags**: Retrieve, create, update, and delete tags.
-**/api/v1/attachments**: Upload and manage attachments.
-**/api/v1/recurrences**: Handle recurring transactions.
-**/api/v1/rules**: Manage rules and rule groups.
-**/api/v1/piggy_banks**: Retrieve and manage piggy banks.
-**/api/v1/preferences**: Fetch user preferences.
-**/api/v1/about**: Retrieve system and user information.
-**/api/v1/cron**: Run cron jobs.
+- **/api/v1/transactions**: Create, list, update, and delete transactions.
+- **/api/v1/accounts**: Retrieve, create, update, and delete account details.
+- **/api/v1/budgets**: Fetch budget information.
+- **/api/v1/categories**: List, create, update, and delete categories.
+- **/api/v1/tags**: Retrieve, create, update, and delete tags.
+- **/api/v1/attachments**: Upload and manage attachments.
+- **/api/v1/recurrences**: Handle recurring transactions.
+- **/api/v1/rules**: Manage rules and rule groups.
+- **/api/v1/piggy_banks**: Retrieve and manage piggy banks.
+- **/api/v1/preferences**: Fetch user preferences.
+- **/api/v1/about**: Retrieve system and user information.
+- **/api/v1/cron**: Run cron jobs.
 
 Note: it doesn't do crazy things, mostly one-to-one endpoint mapping, feel free to clone repo and do what you must.
 
