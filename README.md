@@ -1,46 +1,56 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+# n8n Firefly III Node
 
-# n8n-nodes-starter
+This repository contains a custom node for [n8n](https://n8n.io/), an open-source workflow automation tool. The node integrates with [Firefly III](https://www.firefly-iii.org/), a self-hosted personal finance manager.
 
-This repo contains example nodes to help you get started building your own custom integrations for [n8n](n8n.io). It includes the node linter and other dependencies.
+## Features
 
-To make your custom node available to the community, you must create it as an npm package, and [submit it to the npm registry](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry).
+- **Create Transactions**: Automate the creation of transactions in Firefly III.
+- **Retrieve Accounts**: Fetch account details from Firefly III.
+- **List Transactions**: Retrieve a list of transactions from your Firefly III instance.
+- **Update Transactions**: Update existing transactions in Firefly III.
 
-## Prerequisites
+## Supported Endpoints
 
-You need the following installed on your development machine:
+This node supports many of Firefly III API endpoints, such as:
 
-* [git](https://git-scm.com/downloads)
-* Node.js and pnpm. Minimum version Node 18. You can find instructions on how to install both using nvm (Node Version Manager) for Linux, Mac, and WSL [here](https://github.com/nvm-sh/nvm). For Windows users, refer to Microsoft's guide to [Install NodeJS on Windows](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows).
-* Install n8n with:
-  ```
-  pnpm install n8n -g
-  ```
-* Recommended: follow n8n's guide to [set up your development environment](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/).
+**/api/v1/transactions**: Create, list, update, and delete transactions.
+**/api/v1/accounts**: Retrieve, create, update, and delete account details.
+**/api/v1/budgets**: Fetch budget information.
+**/api/v1/categories**: List, create, update, and delete categories.
+**/api/v1/tags**: Retrieve, create, update, and delete tags.
+**/api/v1/attachments**: Upload and manage attachments.
+**/api/v1/recurrences**: Handle recurring transactions.
+**/api/v1/rules**: Manage rules and rule groups.
+**/api/v1/piggy_banks**: Retrieve and manage piggy banks.
+**/api/v1/preferences**: Fetch user preferences.
+**/api/v1/about**: Retrieve system and user information.
+**/api/v1/cron**: Run cron jobs.
 
-## Using this starter
+Note: it doesn't do crazy things, mostly one-to-one endpoint mapping, feel free to clone repo and do what you must.
 
-These are the basic steps for working with the starter. For detailed guidance on creating and publishing nodes, refer to the [documentation](https://docs.n8n.io/integrations/creating-nodes/).
+## Usage
 
-1. [Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template repository.
-2. Clone your new repo:
-   ```
-   git clone https://github.com/<your organization>/<your-repo-name>.git
-   ```
-3. Run `pnpm i` to install dependencies.
-4. Open the project in your editor.
-5. Browse the examples in `/nodes` and `/credentials`. Modify the examples, or replace them with your own nodes.
-6. Update the `package.json` to match your details.
-7. Run `pnpm lint` to check for errors or `pnpm lintfix` to automatically fix errors when possible.
-8. Test your node locally. Refer to [Run your node locally](https://docs.n8n.io/integrations/creating-nodes/test/run-node-locally/) for guidance.
-9. Replace this README with documentation for your node. Use the [README_TEMPLATE](README_TEMPLATE.md) to get started.
-10. Update the LICENSE file to use your details.
-11. [Publish](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry) your package to npm.
+1. Open your n8n instance.
+2. Create a new workflow.
+3. Add the Firefly III node to your workflow.
+4. Configure the node with your Firefly III API credentials.
+5. Select the desired operation (e.g., Create Transaction, Retrieve Accounts).
+6. Execute the workflow to automate your personal finance tasks.
 
-## More information
+## Configuration
 
-Refer to our [documentation on creating nodes](https://docs.n8n.io/integrations/creating-nodes/) for detailed information on building your own nodes.
+To use this node, you need to configure it with your Firefly III API credentials. You can obtain these credentials from your Firefly III instance.
+
+1. Log in to your Firefly III instance.
+2. Navigate to the API section.
+3. Create a new API token.
+4. Copy the token and paste it into the n8n Firefly III node configuration.
 
 ## License
 
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- [n8n](https://n8n.io/)
+- [Firefly III](https://www.firefly-iii.org/)
