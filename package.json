@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-fireflyiii",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Control your Firefly III instance with n8n",
   "keywords": [
     "n8n-community-node-package"
