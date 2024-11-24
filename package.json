@@ -39,7 +39,7 @@
       "dist/credentials/FireflyiiiOAuth2Api.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ExampleNode/Fireflyiii.node.js"
+      "dist/nodes/FireFlyIII/Fireflyiii.node.js"
     ]
   },
   "devDependencies": {
