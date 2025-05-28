@@ -101,6 +101,9 @@ export class Fireflyiii implements INodeType {
 				required: true,
 			},
 		],
+		usableAsTool: true,
+		// @ts-expect-error: AIEnabled ist kein Standardfeld, wird aber von n8n AI genutzt
+		aiEnabled: true,
 		properties: [
 			// General Info Notice TO SHOW ON TOP to check API Docs
 			{
@@ -201,698 +204,666 @@ export class Fireflyiii implements INodeType {
 		const returnData: INodeExecutionData[] = [];
 
 		for (let i = 0; i < items.length; i++) {
-			const resource = this.getNodeParameter('resource', i) as string;
-			const operation = this.getNodeParameter('operation', i) as string;
+			try {
+				const resource = this.getNodeParameter('resource', i) as string;
+				const operation = this.getNodeParameter('operation', i) as string;
 
-			// Execution logic for different resources and operations
-			// ----------------------------------
-			//             General APIs
-			// ----------------------------------
-			if (resource === 'general') {
-				if (operation === 'searchAll') {
-					const searchFor = this.getNodeParameter('searchFor', i) as string;
-					const queryString = this.getNodeParameter('queryString', i) as string;
+				let response: IDataObject;
+				let success = true;
+				let message = '';
 
-					// Add account-specific fields if available
-					const accountType = this.getNodeParameter('type', i, '') as string;
-					const searchField = this.getNodeParameter('searchField', i, '') as string;
+				// Execution logic for different resources and operations
+				// ----------------------------------
+				//             General APIs
+				// ----------------------------------
+				if (resource === 'general') {
+					if (operation === 'searchAll') {
+						const searchFor = this.getNodeParameter('searchFor', i) as string;
+						const queryString = this.getNodeParameter('queryString', i) as string;
+						const accountType = this.getNodeParameter('type', i, '') as string;
+						const searchField = this.getNodeParameter('searchField', i, '') as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/search/${searchFor}`,
-						query: {
-							type: accountType,
-							field: searchField,
-							query: queryString,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getInsights') {
-					// Get "Insights On" & "Group By" values for the API endpoint
-					const insightScope = this.getNodeParameter('insight', i) as string;
-					const groupBy = this.getNodeParameter('groupBy', i, '') as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/search/${searchFor}`,
+							query: {
+								type: accountType,
+								field: searchField,
+								query: queryString,
+							},
+						});
+						message = 'Suche erfolgreich durchgeführt';
+					} else if (operation === 'getInsights') {
+						// Get "Insights On" & "Group By" values for the API endpoint
+						const insightScope = this.getNodeParameter('insight', i) as string;
+						const groupBy = this.getNodeParameter('groupBy', i, '') as string;
 
-					// Get date range filters
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+						// Get date range filters
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
 
-					// Collect all optional filters
-					const optionalFilters = {
-						accounts: this.getNodeParameter('accounts', i, ['']) as string,
-						categories: this.getNodeParameter('categories', i, '') as string,
-						tags: this.getNodeParameter('tags', i, '') as string,
-						bills: this.getNodeParameter('bills', i, '') as string,
-						budgets: this.getNodeParameter('budgets', i, '') as string,
-					};
+						// Collect all optional filters
+						const optionalFilters = {
+							accounts: this.getNodeParameter('accounts', i, ['']) as string,
+							categories: this.getNodeParameter('categories', i, '') as string,
+							tags: this.getNodeParameter('tags', i, '') as string,
+							bills: this.getNodeParameter('bills', i, '') as string,
+							budgets: this.getNodeParameter('budgets', i, '') as string,
+						};
 
-					// Parse comma separated optional filters to array[integer]
-					const parsedFilters = parseCommaSeparatedFields(optionalFilters);
+						// Parse comma separated optional filters to array[integer]
+						const parsedFilters = parseCommaSeparatedFields(optionalFilters);
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/insight/${insightScope}/${groupBy}`,
-						query: {
-							...dateRangeFilters,
-							...parsedFilters,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'exportData') {
-					const exportType = this.getNodeParameter('exportType', i) as string;
-					const exportFormat = this.getNodeParameter('format', i, '') as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/insight/${insightScope}/${groupBy}`,
+							query: {
+								...dateRangeFilters,
+								...parsedFilters,
+							},
+						});
+						message = 'Insights erfolgreich abgerufen';
+					} else if (operation === 'exportData') {
+						const exportType = this.getNodeParameter('exportType', i) as string;
+						const exportFormat = this.getNodeParameter('format', i, '') as string;
 
-					const start = this.getNodeParameter('start', i, '') as string;
-					const end = this.getNodeParameter('end', i, '') as string;
+						const start = this.getNodeParameter('start', i, '') as string;
+						const end = this.getNodeParameter('end', i, '') as string;
 
-					const accountsInput = this.getNodeParameter('accounts', i, '') as string;
+						const accountsInput = this.getNodeParameter('accounts', i, '') as string;
 
-					const response = await fireflyApiRequestV2.call(
-						this,
-						'GET',
-						`/data/export/${exportType}`,
-						{},
-						{
-							type: exportFormat,
-							start,
-							end,
-							accounts: accountsInput,
-						},
-						undefined,
-						{ encoding: null, resolveWithFullResponse: true },
-					);
+						response = await fireflyApiRequestV2.call(
+							this,
+							'GET',
+							`/data/export/${exportType}`,
+							{},
+							{
+								type: exportFormat,
+								start,
+								end,
+								accounts: accountsInput,
+							},
+							undefined,
+							{ encoding: null, resolveWithFullResponse: true },
+						);
 
-					// console.log('Response Body?:', response.body);
-					// console.log('Response Headers:', response.headers);
-					// console.log('Response Object:', response);
+						// console.log('Response Body?:', response.body);
+						// console.log('Response Headers:', response.headers);
+						// console.log('Response Object:', response);
 
-					// Extract filename from headers
-					let fileName = 'export.csv';
-					if (response.headers['content-disposition']) {
-						const match = response.headers['content-disposition'].match(/filename=(.+)/);
-						if (match) {
-							fileName = match[1];
+						// Extract filename from headers
+						let fileName = 'export.csv';
+						if (response.headers['content-disposition']) {
+							const match = response.headers['content-disposition'].match(/filename=(.+)/);
+							if (match) {
+								fileName = match[1];
+							}
 						}
+						// Prepare binary data
+						const binaryData = await this.helpers.prepareBinaryData(
+							response.body, fileName,
+						);
+
+						response = {
+							json: {},
+							binary: {
+								data: binaryData,
+							},
+						};
+						message = 'Daten erfolgreich exportiert';
 					}
-					// Prepare binary data
-					const binaryData = await this.helpers.prepareBinaryData(
-						response.body, fileName,
-					);
-
-					returnData.push({
-						json: {},
-						binary: {
-							data: binaryData,
-						},
-					});
 				}
-			}
-			// ----------------------------------
-			//             About API
-			// ----------------------------------
-			else if (resource === 'about') {
-				if (operation === 'getSystemInfo') {
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/about',
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getUserInfo') {
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/about/user',
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'runCronJobs') {
-					const cliToken = this.getNodeParameter('cliToken', i) as string;
+				// ----------------------------------
+				//             About API
+				// ----------------------------------
+				else if (resource === 'about') {
+					if (operation === 'getSystemInfo') {
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/about',
+						});
+					} else if (operation === 'getUserInfo') {
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/about/user',
+						});
+					} else if (operation === 'runCronJobs') {
+						const cliToken = this.getNodeParameter('cliToken', i) as string;
 
-					const additionalOptions = this.getNodeParameter(
-						'additionalOptions',
-						i,
-						{},
-					) as IDataObject;
+						const additionalOptions = this.getNodeParameter(
+							'additionalOptions',
+							i,
+							{},
+						) as IDataObject;
 
-					// Dynamically build query parameters
-					const query: IDataObject = {};
-					if (additionalOptions.date) {
-						query.date = additionalOptions.date; // Add only if a value exists
+						// Dynamically build query parameters
+						const query: IDataObject = {};
+						if (additionalOptions.date) {
+							query.date = additionalOptions.date; // Add only if a value exists
+						}
+						if (additionalOptions.force) {
+							query.force = additionalOptions.force; // Add only if true (or any meaningful value)
+						}
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/cron/${cliToken}`,
+							query,
+						});
 					}
-					if (additionalOptions.force) {
-						query.force = additionalOptions.force; // Add only if true (or any meaningful value)
+				}
+				// ----------------------------------
+				//             Accounts API
+				// ----------------------------------
+				else if (resource === 'accounts') {
+					if (operation === 'getTransactions') {
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+						const transactionsType = this.getNodeParameter('transactionsType', i) as string;
+						const accountId = this.getNodeParameter('accountId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/accounts/${accountId}/transactions`,
+							query: {
+								...paginationOptions,
+								...dateRangeFilters,
+								type: transactionsType,
+							},
+						});
+					} else if (operation === 'getAttachments') {
+						const accountId = this.getNodeParameter('accountId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/accounts/${accountId}/attachments`,
+						});
+					} else if (operation === 'getPiggyBanks') {
+						const accountId = this.getNodeParameter('accountId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/accounts/${accountId}/piggy-banks`,
+						});
+					} else if (operation === 'listAccounts') {
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+						const accountType = this.getNodeParameter('accountType', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/accounts',
+							query: {
+								type: accountType,
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'createAccount') {
+						const name = this.getNodeParameter('name', i) as string;
+						const type = this.getNodeParameter('type', i) as string;
+						const accountFields = this.getNodeParameter('accountFields', i, {}) as IDataObject;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'POST',
+							endpoint: '/accounts',
+							body: {
+								name,
+								type,
+								...accountFields,
+							},
+						});
+					} else if (operation === 'getAccount') {
+						const accountId = this.getNodeParameter('accountId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/accounts/${accountId}`,
+						});
+					} else if (operation === 'updateAccount') {
+						const accountId = this.getNodeParameter('accountId', i) as string;
+						const updateFields = this.getNodeParameter('accountFields', i, {}) as IDataObject;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'PUT',
+							endpoint: `/accounts/${accountId}`,
+							body: updateFields,
+						});
+					} else if (operation === 'deleteAccount') {
+						const accountId = this.getNodeParameter('accountId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'DELETE',
+							endpoint: `/accounts/${accountId}`,
+						});
 					}
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/cron/${cliToken}`,
-						query,
-					});
-
-					returnData.push({ json: response });
 				}
-			}
-			// ----------------------------------
-			//             Accounts API
-			// ----------------------------------
-			else if (resource === 'accounts') {
-				if (operation === 'getTransactions') {
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
-					const transactionsType = this.getNodeParameter('transactionsType', i) as string;
-					const accountId = this.getNodeParameter('accountId', i) as string;
+				// ----------------------------------
+				//             Categories API
+				// ----------------------------------
+				else if (resource === 'categories') {
+					if (operation === 'listCategories') {
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/accounts/${accountId}/transactions`,
-						query: {
-							...paginationOptions,
-							...dateRangeFilters,
-							type: transactionsType,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getAttachments') {
-					const accountId = this.getNodeParameter('accountId', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/categories',
+							query: {
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'createCategory') {
+						const name = this.getNodeParameter('name', i) as string;
+						const notes = this.getNodeParameter('notes', i) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/accounts/${accountId}/attachments`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getPiggyBanks') {
-					const accountId = this.getNodeParameter('accountId', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'POST',
+							endpoint: '/categories',
+							body: {
+								name,
+								notes,
+							},
+						});
+					} else if (operation === 'getCategory') {
+						const categoryId = this.getNodeParameter('categoryId', i) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/accounts/${accountId}/piggy-banks`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'listAccounts') {
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
-					const accountType = this.getNodeParameter('accountType', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/categories/${categoryId}`,
+						});
+					} else if (operation === 'updateCategory') {
+						const categoryId = this.getNodeParameter('categoryId', i) as string;
+						const name = this.getNodeParameter('name', i) as string;
+						const notes = this.getNodeParameter('notes', i) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/accounts',
-						query: {
-							type: accountType,
-							...paginationOptions,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'createAccount') {
-					const name = this.getNodeParameter('name', i) as string;
-					const type = this.getNodeParameter('type', i) as string;
-					const accountFields = this.getNodeParameter('accountFields', i, {}) as IDataObject;
+						response = await fireflyApiRequest.call(this, {
+							method: 'PUT',
+							endpoint: `/categories/${categoryId}`,
+							body: {
+								name,
+								notes,
+							},
+						});
+					} else if (operation === 'deleteCategory') {
+						const categoryId = this.getNodeParameter('categoryId', i) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'POST',
-						endpoint: '/accounts',
-						body: {
-							name,
-							type,
-							...accountFields,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getAccount') {
-					const accountId = this.getNodeParameter('accountId', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'DELETE',
+							endpoint: `/categories/${categoryId}`,
+						});
+					} else if (operation === 'getTransactionsByCategory') {
+						const categoryId = this.getNodeParameter('categoryId', i) as string;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/accounts/${accountId}`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'updateAccount') {
-					const accountId = this.getNodeParameter('accountId', i) as string;
-					const updateFields = this.getNodeParameter('accountFields', i, {}) as IDataObject;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'PUT',
-						endpoint: `/accounts/${accountId}`,
-						body: updateFields,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'deleteAccount') {
-					const accountId = this.getNodeParameter('accountId', i) as string;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'DELETE',
-						endpoint: `/accounts/${accountId}`,
-					});
-					returnData.push({ json: response });
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/categories/${categoryId}/transactions`,
+							query: {
+								...paginationOptions,
+								...dateRangeFilters,
+							},
+						});
+					}
 				}
-			}
-			// ----------------------------------
-			//             Categories API
-			// ----------------------------------
-			else if (resource === 'categories') {
-				if (operation === 'listCategories') {
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
+				// ----------------------------------
+				//             Tags API
+				// ----------------------------------
+				else if (resource === 'tags') {
+					if (operation === 'listTags') {
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/categories',
-						query: {
-							...paginationOptions,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'createCategory') {
-					const name = this.getNodeParameter('name', i) as string;
-					const notes = this.getNodeParameter('notes', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/tags',
+							query: paginationOptions,
+						});
+					} else if (operation === 'createTag') {
+						const newName = this.getNodeParameter('name', i) as string;
+						const extraOptions = this.getNodeParameter('extraOptions', i, {}) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'POST',
-						endpoint: '/categories',
-						body: {
-							name,
-							notes,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getCategory') {
-					const categoryId = this.getNodeParameter('categoryId', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'POST',
+							endpoint: '/tags',
+							body: {
+								tag: newName,
+								...extraOptions,
+							},
+						});
+					} else if (operation === 'getTag') {
+						const tagNameId = this.getNodeParameter('tagNameId', i) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/categories/${categoryId}`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'updateCategory') {
-					const categoryId = this.getNodeParameter('categoryId', i) as string;
-					const name = this.getNodeParameter('name', i) as string;
-					const notes = this.getNodeParameter('notes', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/tags/${tagNameId}`,
+						});
+					} else if (operation === 'updateTag') {
+						const tagNameId = this.getNodeParameter('tagNameId', i) as string;
+						const newName = this.getNodeParameter('name', i) as string;
+						const extraOptions = this.getNodeParameter('extraOptions', i, {}) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'PUT',
-						endpoint: `/categories/${categoryId}`,
-						body: {
-							name,
-							notes,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'deleteCategory') {
-					const categoryId = this.getNodeParameter('categoryId', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'PUT',
+							endpoint: `/tags/${tagNameId}`,
+							body: {
+								tag: newName,
+								...extraOptions,
+							},
+						});
+					} else if (operation === 'deleteTag') {
+						const tagNameId = this.getNodeParameter('tagNameId', i) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'DELETE',
-						endpoint: `/categories/${categoryId}`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getTransactionsByCategory') {
-					const categoryId = this.getNodeParameter('categoryId', i) as string;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+						response = await fireflyApiRequest.call(this, {
+							method: 'DELETE',
+							endpoint: `/tags/${tagNameId}`,
+						});
+					} else if (operation === 'getTransactionsByTag') {
+						const tagNameId = this.getNodeParameter('tagNameId', i) as string;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/categories/${categoryId}/transactions`,
-						query: {
-							...paginationOptions,
-							...dateRangeFilters,
-						},
-					});
-					returnData.push({ json: response });
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/tags/${tagNameId}/transactions`,
+							query: {
+								...paginationOptions,
+								...dateRangeFilters,
+							},
+						});
+					}
 				}
-			}
-			// ----------------------------------
-			//             Tags API
-			// ----------------------------------
-			else if (resource === 'tags') {
-				if (operation === 'listTags') {
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
+				// ----------------------------------
+				//             Transactions API
+				// ----------------------------------
+				else if (resource === 'transactions') {
+					if (operation === 'listTransactions') {
+						const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/tags',
-						query: paginationOptions,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'createTag') {
-					const newName = this.getNodeParameter('name', i) as string;
-					const extraOptions = this.getNodeParameter('extraOptions', i, {}) as IDataObject;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'POST',
-						endpoint: '/tags',
-						body: {
-							tag: newName,
-							...extraOptions,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getTag') {
-					const tagNameId = this.getNodeParameter('tagNameId', i) as string;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/tags/${tagNameId}`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'updateTag') {
-					const tagNameId = this.getNodeParameter('tagNameId', i) as string;
-					const newName = this.getNodeParameter('name', i) as string;
-					const extraOptions = this.getNodeParameter('extraOptions', i, {}) as IDataObject;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'PUT',
-						endpoint: `/tags/${tagNameId}`,
-						body: {
-							tag: newName,
-							...extraOptions,
-						},
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'deleteTag') {
-					const tagNameId = this.getNodeParameter('tagNameId', i) as string;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'DELETE',
-						endpoint: `/tags/${tagNameId}`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'getTransactionsByTag') {
-					const tagNameId = this.getNodeParameter('tagNameId', i) as string;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/tags/${tagNameId}/transactions`,
-						query: {
+						// Build query parameters
+						const query: IDataObject = {
+							type: filters.type || filters.customType,
+							start: filters.start,
+							end: filters.end,
 							...paginationOptions,
-							...dateRangeFilters,
-						},
-					});
-					returnData.push({ json: response });
+						};
+
+						// API Request
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/transactions',
+							query,
+						});
+					} else if (operation === 'getTransaction') {
+						const transactionId = this.getNodeParameter('transactionId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/transactions/${transactionId}`,
+						});
+					} else if (operation === 'createTransaction') {
+						response = await handleTransaction.call(this, 'POST', '/transactions', i);
+					} else if (operation === 'updateTransaction') {
+						const transactionId = this.getNodeParameter('transactionId', i) as string;
+						response = await handleTransaction.call(
+							this,
+							'PUT',
+							`/transactions/${transactionId}`,
+							i,
+						);
+					} else if (operation === 'deleteTransaction') {
+						const transactionId = this.getNodeParameter('transactionId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'DELETE',
+							endpoint: `/transactions/${transactionId}`,
+						});
+					} else if (operation === 'getAttachments') {
+						const transactionId = this.getNodeParameter('transactionId', i) as string;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/transactions/${transactionId}/attachments`,
+							query: {
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'getPiggyBankEvents') {
+						const transactionId = this.getNodeParameter('transactionId', i) as string;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/transactions/${transactionId}/piggy-bank-events`,
+							query: {
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'listTransactionLinks') {
+						const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/transaction-journals/${transactionJournalId}/links`,
+							query: {
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'getTransactionJournal') {
+						const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/transaction-journals/${transactionJournalId}`,
+						});
+					} else if (operation === 'deleteTransactionSplit') {
+						const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
+
+						response = await fireflyApiRequest.call(this, {
+							method: 'DELETE',
+							endpoint: `/transaction-journals/${transactionJournalId}`,
+						});
+					}
 				}
-			}
-			// ----------------------------------
-			//             Transactions API
-			// ----------------------------------
-			else if (resource === 'transactions') {
-				if (operation === 'listTransactions') {
-					const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
+				// ----------------------------------
+				//             Rules & Groups API
+				// ----------------------------------
+				else if (resource === 'rulesAndGroups') {
+					// Rule Groups Operations
+					if (operation === 'listGroups') {
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
 
-					// Build query parameters
-					const query: IDataObject = {
-						type: filters.type || filters.customType,
-						start: filters.start,
-						end: filters.end,
-						...paginationOptions,
-					};
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/rule-groups',
+							query: {
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'getGroup') {
+						const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
 
-					// API Request
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/transactions',
-						query,
-					});
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/rule-groups/${ruleGroupId}`,
+						});
+					} else if (operation === 'listGroupRules') {
+						const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
 
-					returnData.push({ json: response });
-				} else if (operation === 'getTransaction') {
-					const transactionId = this.getNodeParameter('transactionId', i) as string;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/rule-groups/${ruleGroupId}/rules`,
+							query: {
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'testGroup') {
+						const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+						const testLimits = this.getNodeParameter('testLimits', i, {}) as IDataObject;
+						const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/transactions/${transactionId}`,
-					});
-					returnData.push({ json: response });
-				} else if (operation === 'createTransaction') {
-					const response = await handleTransaction.call(this, 'POST', '/transactions', i);
-					returnData.push({ json: response });
-				} else if (operation === 'updateTransaction') {
-					const transactionId = this.getNodeParameter('transactionId', i) as string;
-					const response = await handleTransaction.call(
-						this,
-						'PUT',
-						`/transactions/${transactionId}`,
-						i,
-					);
-					returnData.push({ json: response });
-				} else if (operation === 'deleteTransaction') {
-					const transactionId = this.getNodeParameter('transactionId', i) as string;
+						// Parse comma separated accounts to array[integer]
+						const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'DELETE',
-						endpoint: `/transactions/${transactionId}`,
-					});
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/rule-groups/${ruleGroupId}/test`,
+							query: {
+								...paginationOptions,
+								...dateRangeFilters,
+								...testLimits,
+								...parsedAcconuts,
+							},
+						});
+					} else if (operation === 'triggerGroup') {
+						const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+						const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
 
-					returnData.push({ json: response });
-				} else if (operation === 'getAttachments') {
-					const transactionId = this.getNodeParameter('transactionId', i) as string;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
+						// Parse comma separated accounts to array[integer]
+						const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/transactions/${transactionId}/attachments`,
-						query: {
-							...paginationOptions,
-						},
-					});
+						response = await fireflyApiRequest.call(this, {
+							method: 'POST',
+							endpoint: `/rule-groups/${ruleGroupId}/trigger`,
+							body: {
+								...dateRangeFilters,
+								...parsedAcconuts,
+							},
+						});
+					}
+					// Rule Operations
+					else if (operation === 'listRules') {
+						const paginationOptions = this.getNodeParameter(
+							'paginationOptions',
+							i,
+							{},
+						) as IDataObject;
 
-					returnData.push({ json: response });
-				} else if (operation === 'getPiggyBankEvents') {
-					const transactionId = this.getNodeParameter('transactionId', i) as string;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: '/rules',
+							query: {
+								...paginationOptions,
+							},
+						});
+					} else if (operation === 'getRule') {
+						const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/transactions/${transactionId}/piggy-bank-events`,
-						query: {
-							...paginationOptions,
-						},
-					});
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/rules/${ruleGroupId}`,
+						});
+					} else if (operation === 'testRule') {
+						const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+						const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
 
-					returnData.push({ json: response });
-				} else if (operation === 'listTransactionLinks') {
-					const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
+						// Parse comma separated accounts to array[integer]
+						const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/transaction-journals/${transactionJournalId}/links`,
-						query: {
-							...paginationOptions,
-						},
-					});
+						response = await fireflyApiRequest.call(this, {
+							method: 'GET',
+							endpoint: `/rules/${ruleGroupId}/test`,
+							query: {
+								...dateRangeFilters,
+								...parsedAcconuts,
+							},
+						});
+					} else if (operation === 'triggerRule') {
+						const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
+						const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
+						const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
 
-					returnData.push({ json: response });
-				} else if (operation === 'getTransactionJournal') {
-					const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
+						// Parse comma separated accounts to array[integer]
+						const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/transaction-journals/${transactionJournalId}`,
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'deleteTransactionSplit') {
-					const transactionJournalId = this.getNodeParameter('transactionId', i) as string;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'DELETE',
-						endpoint: `/transaction-journals/${transactionJournalId}`,
-					});
-
-					returnData.push({ json: response });
+						response = await fireflyApiRequest.call(this, {
+							method: 'POST',
+							endpoint: `/rules/${ruleGroupId}/trigger`,
+							query: {
+								...dateRangeFilters,
+								...parsedAcconuts,
+							},
+						});
+					}
 				}
-			}
-			// ----------------------------------
-			//             Rules & Groups API
-			// ----------------------------------
-			else if (resource === 'rulesAndGroups') {
-				// Rule Groups Operations
-				if (operation === 'listGroups') {
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
 
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/rule-groups',
-						query: {
-							...paginationOptions,
-						},
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'getGroup') {
-					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/rule-groups/${ruleGroupId}`,
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'listGroupRules') {
-					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/rule-groups/${ruleGroupId}/rules`,
-						query: {
-							...paginationOptions,
-						},
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'testGroup') {
-					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
-					const testLimits = this.getNodeParameter('testLimits', i, {}) as IDataObject;
-					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
-
-					// Parse comma separated accounts to array[integer]
-					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/rule-groups/${ruleGroupId}/test`,
-						query: {
-							...paginationOptions,
-							...dateRangeFilters,
-							...testLimits,
-							...parsedAcconuts,
-						},
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'triggerGroup') {
-					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
-					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
-
-					// Parse comma separated accounts to array[integer]
-					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'POST',
-						endpoint: `/rule-groups/${ruleGroupId}/trigger`,
-						body: {
-							...dateRangeFilters,
-							...parsedAcconuts,
-						},
-					});
-
-					returnData.push({ json: response });
-				}
-				// Rule Operations
-				else if (operation === 'listRules') {
-					const paginationOptions = this.getNodeParameter(
-						'paginationOptions',
-						i,
-						{},
-					) as IDataObject;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: '/rules',
-						query: {
-							...paginationOptions,
-						},
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'getRule') {
-					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/rules/${ruleGroupId}`,
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'testRule') {
-					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
-					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
-
-					// Parse comma separated accounts to array[integer]
-					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'GET',
-						endpoint: `/rules/${ruleGroupId}/test`,
-						query: {
-							...dateRangeFilters,
-							...parsedAcconuts,
-						},
-					});
-
-					returnData.push({ json: response });
-				} else if (operation === 'triggerRule') {
-					const ruleGroupId = this.getNodeParameter('ruleGroupId', i) as string;
-					const dateRangeFilters = this.getNodeParameter('dateRangeFilters', i, {}) as IDataObject;
-					const accountsInput = this.getNodeParameter('accounts', i, ['']) as string;
-
-					// Parse comma separated accounts to array[integer]
-					const parsedAcconuts = parseCommaSeparatedFields({ accounts: accountsInput });
-
-					const response = await fireflyApiRequest.call(this, {
-						method: 'POST',
-						endpoint: `/rules/${ruleGroupId}/trigger`,
-						query: {
-							...dateRangeFilters,
-							...parsedAcconuts,
-						},
-					});
-
-					returnData.push({ json: response });
-				}
+				// Standardisierte Rückgabe für AI-Agenten
+				returnData.push({
+					json: {
+						success,
+						operation,
+						resource,
+						message,
+						data: response,
+					},
+				});
+			} catch (error) {
+				// Fehlerbehandlung für AI-Agenten
+				returnData.push({
+					json: {
+						success: false,
+						operation: this.getNodeParameter('operation', i) as string,
+						resource: this.getNodeParameter('resource', i) as string,
+						message: error.message || 'Ein Fehler ist aufgetreten',
+						error: error.toString(),
+					},
+				});
 			}
 		}
 		return [returnData];
