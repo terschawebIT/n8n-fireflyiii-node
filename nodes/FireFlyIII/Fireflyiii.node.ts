@@ -86,7 +86,7 @@ export class Fireflyiii implements INodeType {
 		displayName: 'FireFly III',
 		name: 'fireflyiii',
 		icon: 'file:fireflyiii.svg',
-		group: ['input'],
+		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Read, update, write and delete data using the powerful FireFly III API',

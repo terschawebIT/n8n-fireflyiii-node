@@ -39,7 +39,20 @@
     ],
     "nodes": [
       "dist/nodes/FireFlyIII/Fireflyiii.node.js"
-    ]
+    ],
+    "ai": {
+      "enabled": true,
+      "description": "FireFly III Node für n8n AI Agenten",
+      "capabilities": [
+        "transactions",
+        "accounts",
+        "categories",
+        "tags",
+        "rules",
+        "search",
+        "export"
+      ]
+    }
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
