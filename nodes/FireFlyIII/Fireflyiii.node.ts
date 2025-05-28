@@ -101,9 +101,6 @@ export class Fireflyiii implements INodeType {
 				required: true,
 			},
 		],
-		usableAsTool: true,
-		// @ts-expect-error: AIEnabled ist kein Standardfeld, wird aber von n8n AI genutzt
-		aiEnabled: true,
 		properties: [
 			// General Info Notice TO SHOW ON TOP to check API Docs
 			{
@@ -198,7 +195,6 @@ export class Fireflyiii implements INodeType {
 		],
 	};
 
-	// Logic for Execution
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
@@ -208,7 +204,7 @@ export class Fireflyiii implements INodeType {
 				const resource = this.getNodeParameter('resource', i) as string;
 				const operation = this.getNodeParameter('operation', i) as string;
 
-				let response: IDataObject;
+				let response: IDataObject = {};
 				let success = true;
 				let message = '';
 
@@ -271,7 +267,7 @@ export class Fireflyiii implements INodeType {
 
 						const accountsInput = this.getNodeParameter('accounts', i, '') as string;
 
-						response = await fireflyApiRequestV2.call(
+						const exportResponse = await fireflyApiRequestV2.call(
 							this,
 							'GET',
 							`/data/export/${exportType}`,
@@ -283,24 +279,24 @@ export class Fireflyiii implements INodeType {
 								accounts: accountsInput,
 							},
 							undefined,
-							{ encoding: null, resolveWithFullResponse: true },
+							{
+								encoding: 'arraybuffer',
+								returnFullResponse: true,
+							},
 						);
 
-						// console.log('Response Body?:', response.body);
-						// console.log('Response Headers:', response.headers);
-						// console.log('Response Object:', response);
-
-						// Extract filename from headers
 						let fileName = 'export.csv';
-						if (response.headers['content-disposition']) {
-							const match = response.headers['content-disposition'].match(/filename=(.+)/);
+						if (exportResponse.headers && typeof exportResponse.headers === 'object' && 'content-disposition' in exportResponse.headers) {
+							const contentDisposition = exportResponse.headers['content-disposition'] as string;
+							const match = contentDisposition.match(/filename=(.+)/);
 							if (match) {
 								fileName = match[1];
 							}
 						}
-						// Prepare binary data
+
 						const binaryData = await this.helpers.prepareBinaryData(
-							response.body, fileName,
+							exportResponse.body as Buffer,
+							fileName,
 						);
 
 						response = {
@@ -860,8 +856,8 @@ export class Fireflyiii implements INodeType {
 						success: false,
 						operation: this.getNodeParameter('operation', i) as string,
 						resource: this.getNodeParameter('resource', i) as string,
-						message: error.message || 'Ein Fehler ist aufgetreten',
-						error: error.toString(),
+						message: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten',
+						error: error instanceof Error ? error.toString() : String(error),
 					},
 				});
 			}
