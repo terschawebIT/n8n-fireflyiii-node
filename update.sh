@@ -4,8 +4,8 @@
 
 echo "🔄 Starting update for n8n-nodes-fireflyiii..."
 
-# Wechsle in das Plugin-Verzeichnis (anpassen je nach Installation)
-cd /opt/n8n/custom-nodes/n8n-nodes-fireflyiii || {
+# Wechsle in das Plugin-Verzeichnis
+cd /opt/n8n/custom-nodes/n8n-fireflyiii-node || {
     echo "❌ Plugin directory not found. Please adjust the path in the script."
     echo "Current directory: $(pwd)"
     exit 1
@@ -16,7 +16,7 @@ echo "💾 Stashing local changes..."
 git stash
 
 # Stelle sicher, dass das Verzeichnis als sicher markiert ist
-git config --global --add safe.directory /opt/n8n/custom-nodes/n8n-nodes-fireflyiii
+git config --global --add safe.directory /opt/n8n/custom-nodes/n8n-fireflyiii-node
 
 # Hole die neuesten Änderungen
 echo "📥 Pulling latest changes..."
@@ -44,12 +44,12 @@ if [ $? -eq 0 ]; then
 
     # Setze die Berechtigungen (falls nötig)
     echo "🔐 Setting permissions..."
-    chown -R n8n:n8n /opt/n8n/custom-nodes/n8n-nodes-fireflyiii 2>/dev/null || echo "⚠️ Could not set permissions (running as non-root?)"
+    chown -R n8n:n8n /opt/n8n/custom-nodes/n8n-fireflyiii-node 2>/dev/null || echo "⚠️ Could not set permissions (running as non-root?)"
 
     # Stelle sicher, dass die n8n-Konfiguration korrekt ist
-    if [ -f "/opt/n8n/.env" ]; then
-        if ! grep -q "N8N_CUSTOM_EXTENSIONS" /opt/n8n/.env; then
-            echo "N8N_CUSTOM_EXTENSIONS=\"/opt/n8n/custom-nodes\"" >> /opt/n8n/.env
+    if [ -f "/home/n8n/.n8n/.env" ]; then
+        if ! grep -q "N8N_CUSTOM_EXTENSIONS" /home/n8n/.n8n/.env; then
+            echo "N8N_CUSTOM_EXTENSIONS=\"/opt/n8n/custom-nodes\"" >> /home/n8n/.n8n/.env
             echo "📝 Added N8N_CUSTOM_EXTENSIONS to .env"
         fi
     fi
