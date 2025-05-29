@@ -1,14 +1,16 @@
 {
   "name": "n8n-nodes-fireflyiii",
-  "version": "0.1.1",
-  "description": "n8n community node for FireFly III",
+  "version": "0.2.0",
+  "description": "n8n community node for FireFly III - optimiert für AI-Agenten",
   "keywords": [
     "n8n-community-node-package",
     "n8n",
     "fireflyiii",
     "firefly-iii",
     "finance",
-    "accounting"
+    "accounting",
+    "ai-agent",
+    "tool"
   ],
   "license": "MIT",
   "homepage": "https://github.com/terschawebIT/n8n-fireflyiii-node",
@@ -42,15 +44,17 @@
     ],
     "ai": {
       "enabled": true,
-      "description": "FireFly III Node für n8n AI Agenten",
+      "description": "FireFly III Personal Finance Manager Integration - ermöglicht AI-Agenten vollständige Verwaltung von Finanzdaten, Transaktionen, Konten, Kategorien, Tags und Regeln",
       "capabilities": [
-        "transactions",
-        "accounts",
-        "categories",
-        "tags",
-        "rules",
-        "search",
-        "export"
+        "manage_transactions",
+        "manage_accounts",
+        "manage_categories",
+        "manage_tags",
+        "manage_rules",
+        "search_financial_data",
+        "export_financial_data",
+        "insights_and_analytics",
+        "system_information"
       ]
     }
   },
@@ -60,13 +64,16 @@
     "@typescript-eslint/parser": "~5.45",
     "eslint-plugin-n8n-nodes-base": "^1.11.0",
     "gulp": "^4.0.2",
-    "n8n-core": "~0.125.0",
-    "n8n-workflow": "~0.107.0",
+    "n8n-core": "^1.14.1",
+    "n8n-workflow": "^1.82.0",
     "prettier": "^2.7.1",
     "typescript": "~4.8.4"
   },
   "dependencies": {
     "axios": "^1.6.2",
     "form-data": "^4.0.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": ">=1.0.0"
   }
 }

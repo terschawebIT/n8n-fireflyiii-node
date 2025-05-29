@@ -5,6 +5,7 @@ import {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	NodeConnectionType,
 } from 'n8n-workflow';
 
 import { fireflyApiRequest } from './utils/ApiRequest';
@@ -93,14 +94,15 @@ export class Fireflyiii implements INodeType {
 		defaults: {
 			name: 'FireFly III',
 		},
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionType.Main],
+		outputs: [NodeConnectionType.Main],
 		credentials: [
 			{
 				name: 'fireflyiiiOAuth2Api',
 				required: true,
 			},
 		],
+		usableAsTool: true,
 		properties: [
 			// General Info Notice TO SHOW ON TOP to check API Docs
 			{
@@ -317,11 +319,13 @@ export class Fireflyiii implements INodeType {
 							method: 'GET',
 							endpoint: '/about',
 						});
+						message = 'Systeminformationen erfolgreich abgerufen';
 					} else if (operation === 'getUserInfo') {
 						response = await fireflyApiRequest.call(this, {
 							method: 'GET',
 							endpoint: '/about/user',
 						});
+						message = 'Benutzerinformationen erfolgreich abgerufen';
 					} else if (operation === 'runCronJobs') {
 						const cliToken = this.getNodeParameter('cliToken', i) as string;
 
@@ -345,6 +349,7 @@ export class Fireflyiii implements INodeType {
 							endpoint: `/cron/${cliToken}`,
 							query,
 						});
+						message = 'Cron-Jobs erfolgreich ausgeführt';
 					}
 				}
 				// ----------------------------------
